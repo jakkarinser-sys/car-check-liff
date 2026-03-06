@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ตรวจสภาพรถ</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Sarabun', sans-serif; background: #f0f4f8; color: #1a202c; }
@@ -40,72 +41,46 @@
     border-radius: 8px; font-size: 14px; color: #2d3748;
     transition: border 0.2s;
   }
-  input:focus, select:focus, textarea:focus {
-    outline: none; border-color: #00b900;
-  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #00b900; }
 
   .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .check-item {
     border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;
-    transition: all 0.2s; cursor: pointer; position: relative;
-    background: #fafafa;
+    transition: all 0.2s; cursor: pointer; position: relative; background: #fafafa;
   }
   .check-item.ok { border-color: #00b900; background: #f0fff0; }
   .check-item.not-ok { border-color: #e53e3e; background: #fff5f5; }
-
-  .check-item input[type=radio] { display: none; }
-  .item-name { font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
-
+  .item-name { font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; }
   .radio-group { display: flex; gap: 6px; }
   .radio-btn {
     flex: 1; text-align: center; padding: 5px 0;
     border-radius: 6px; font-size: 12px; font-weight: 700;
-    border: 1.5px solid #e2e8f0; background: white; cursor: pointer;
-    transition: all 0.15s;
+    border: 1.5px solid #e2e8f0; background: white; cursor: pointer; transition: all 0.15s;
   }
   .radio-btn.selected-ok { background: #00b900; color: white; border-color: #00b900; }
   .radio-btn.selected-bad { background: #e53e3e; color: white; border-color: #e53e3e; }
 
-  .badge {
-    position: absolute; top: 6px; right: 6px;
-    width: 18px; height: 18px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700;
-  }
-  .badge-ok { background: #00b900; color: white; }
-  .badge-bad { background: #e53e3e; color: white; }
-
-  .progress-bar {
-    background: #e2e8f0; border-radius: 99px; height: 6px; margin: 8px 0 4px;
-    overflow: hidden;
-  }
+  .progress-bar { background: #e2e8f0; border-radius: 99px; height: 6px; margin: 8px 0 4px; overflow: hidden; }
   .progress-fill { height: 100%; background: #00b900; border-radius: 99px; transition: width 0.3s; }
   .progress-text { font-size: 11px; color: #718096; text-align: right; }
+
+  .summary-count { display: flex; gap: 8px; margin-bottom: 10px; }
+  .count-badge { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 12px; }
+  .count-ok { background: #f0fff0; color: #276749; border: 1px solid #c6f6d5; }
+  .count-bad { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+  .count-pending { background: #fffbeb; color: #b7791f; border: 1px solid #fefcbf; }
+  .count-num { font-size: 22px; font-weight: 800; display: block; }
 
   .btn-submit {
     width: 100%; padding: 14px; background: linear-gradient(135deg, #00b900, #00d000);
     color: white; font-size: 16px; font-weight: 700;
     border: none; border-radius: 12px; cursor: pointer;
     margin-top: 8px; margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(0,185,0,0.35);
-    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 12px rgba(0,185,0,0.35); transition: transform 0.15s;
   }
   .btn-submit:active { transform: scale(0.97); }
   .btn-submit:disabled { background: #a0aec0; box-shadow: none; cursor: not-allowed; }
 
-  .summary-count {
-    display: flex; gap: 8px; margin-bottom: 10px;
-  }
-  .count-badge {
-    flex: 1; text-align: center; padding: 8px;
-    border-radius: 8px; font-size: 12px;
-  }
-  .count-ok { background: #f0fff0; color: #276749; border: 1px solid #c6f6d5; }
-  .count-bad { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
-  .count-pending { background: #fffbeb; color: #b7791f; border: 1px solid #fefcbf; }
-  .count-num { font-size: 22px; font-weight: 800; display: block; }
-
-  /* Result overlay */
   .overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.6); z-index: 100;
@@ -117,18 +92,41 @@
     width: 100%; max-width: 360px; text-align: center;
     animation: popIn 0.3s ease;
   }
-  @keyframes popIn {
-    from { transform: scale(0.85); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .result-icon { font-size: 48px; margin-bottom: 8px; }
   .result-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .result-sub { font-size: 13px; color: #718096; margin-bottom: 16px; }
-  .btn-close {
-    width: 100%; padding: 12px; background: #00b900;
-    color: white; font-size: 15px; font-weight: 700;
-    border: none; border-radius: 10px; cursor: pointer;
+  .btn-close { width: 100%; padding: 12px; background: #00b900; color: white; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; }
+
+  /* รูปภาพสรุปที่ซ่อนไว้ */
+  #reportCard {
+    position: fixed; left: -9999px; top: 0;
+    width: 600px; background: white; padding: 24px;
+    font-family: 'Sarabun', sans-serif;
   }
+  .report-header {
+    background: linear-gradient(135deg, #00b900, #00d000);
+    color: white; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .report-title { font-size: 22px; font-weight: 800; }
+  .report-sub { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+  .report-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .report-info-item { background: #f7fafc; border-radius: 8px; padding: 10px; }
+  .report-info-label { font-size: 11px; color: #718096; }
+  .report-info-value { font-size: 15px; font-weight: 700; color: #2d3748; }
+  .report-section { margin-bottom: 14px; }
+  .report-section-title { font-size: 14px; font-weight: 700; color: #4a5568; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #e8f5e9; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .report-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; font-size: 13px; }
+  .report-item.ok { background: #f0fff0; color: #276749; }
+  .report-item.bad { background: #fff5f5; color: #c53030; }
+  .report-item.pending { background: #f7fafc; color: #718096; }
+  .report-summary { display: flex; gap: 10px; margin-bottom: 16px; }
+  .report-summary-box { flex: 1; text-align: center; padding: 12px; border-radius: 10px; }
+  .report-summary-num { font-size: 32px; font-weight: 800; }
+  .report-footer { text-align: center; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; }
+  .report-footer.pass { background: #f0fff0; color: #276749; }
+  .report-footer.fail { background: #fff5f5; color: #c53030; }
 </style>
 </head>
 <body>
@@ -142,8 +140,6 @@
 </div>
 
 <div class="container">
-
-  <!-- ข้อมูลพนักงาน -->
   <div class="card">
     <div class="card-title">👤 ข้อมูลผู้ตรวจ</div>
     <div class="field">
@@ -176,7 +172,6 @@
     </div>
   </div>
 
-  <!-- progress -->
   <div class="card" style="padding:12px 16px">
     <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:6px">📊 ความคืบหน้าการตรวจ</div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -188,10 +183,8 @@
     </div>
   </div>
 
-  <!-- รายการตรวจ -->
   <div id="checkSections"></div>
 
-  <!-- หมายเหตุ -->
   <div class="card">
     <div class="card-title">📝 หมายเหตุเพิ่มเติม</div>
     <textarea id="remark" rows="3" placeholder="ระบุปัญหาหรือข้อสังเกตเพิ่มเติม (ถ้ามี)"></textarea>
@@ -202,65 +195,74 @@
   </button>
 </div>
 
-<!-- Result overlay -->
+<!-- Report Card (ซ่อนไว้สร้างรูป) -->
+<div id="reportCard"></div>
+
 <div class="overlay" id="overlay">
   <div class="result-card">
     <div class="result-icon" id="resultIcon">✅</div>
     <div class="result-title" id="resultTitle">บันทึกสำเร็จ!</div>
-    <div class="result-sub" id="resultSub">ระบบกำลังส่งผลการตรวจกลับไปใน LINE...</div>
+    <div class="result-sub" id="resultSub">ระบบกำลังสร้างรูปและส่งกลับ LINE...</div>
     <button class="btn-close" onclick="document.getElementById('overlay').classList.remove('active')">ปิด</button>
   </div>
 </div>
 
 <script>
-const SECTIONS = [
-  {
-    title: "🔆 ระบบไฟและสัญญาณ", icon: "💡",
-    items: [
-      { id: "light_front", name: "ไฟหน้า", icon: "🔦" },
-      { id: "light_back", name: "ไฟท้าย", icon: "🔦" },
-      { id: "light_brake", name: "ไฟเบรก", icon: "🔴" },
-      { id: "light_signal", name: "ไฟเลี้ยว", icon: "🟡" },
-    ]
-  },
-  {
-    title: "🛞 ยางและล้อ", icon: "🛞",
-    items: [
-      { id: "tire_fl", name: "ยางหน้าซ้าย", icon: "🛞" },
-      { id: "tire_fr", name: "ยางหน้าขวา", icon: "🛞" },
-      { id: "tire_rl", name: "ยางหลังซ้าย", icon: "🛞" },
-      { id: "tire_rr", name: "ยางหลังขวา", icon: "🛞" },
-    ]
-  },
-  {
-    title: "⚙️ ระบบเครื่องยนต์", icon: "⚙️",
-    items: [
-      { id: "engine_oil", name: "น้ำมันเครื่อง", icon: "🛢️" },
-      { id: "coolant", name: "น้ำหล่อเย็น", icon: "💧" },
-      { id: "battery", name: "แบตเตอรี่", icon: "🔋" },
-      { id: "wiper", name: "น้ำฉีดกระจก", icon: "🫧" },
-    ]
-  },
-  {
-    title: "🚘 ระบบความปลอดภัย", icon: "🛡️",
-    items: [
-      { id: "brake", name: "ระบบเบรก", icon: "🔴" },
-      { id: "seatbelt", name: "เข็มขัดนิรภัย", icon: "🔒" },
-      { id: "mirror", name: "กระจกมองหลัง", icon: "🔲" },
-      { id: "horn", name: "แตร", icon: "📢" },
-    ]
+const LIFF_ID = "2009341805-y6MZF7Je";
+let lineUserId = null;
+
+// Init LIFF
+async function initLiff() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (liff.isLoggedIn()) {
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+    } else {
+      liff.login();
+    }
+  } catch(e) {
+    console.log("LIFF init error:", e);
   }
+}
+
+const SECTIONS = [
+  { title: "ระบบไฟและสัญญาณ", icon: "💡", items: [
+    { id: "light_front", name: "ไฟหน้า", icon: "🔦" },
+    { id: "light_back", name: "ไฟท้าย", icon: "🔦" },
+    { id: "light_brake", name: "ไฟเบรก", icon: "🔴" },
+    { id: "light_signal", name: "ไฟเลี้ยว", icon: "🟡" },
+  ]},
+  { title: "ยางและล้อ", icon: "🛞", items: [
+    { id: "tire_fl", name: "ยางหน้าซ้าย", icon: "🛞" },
+    { id: "tire_fr", name: "ยางหน้าขวา", icon: "🛞" },
+    { id: "tire_rl", name: "ยางหลังซ้าย", icon: "🛞" },
+    { id: "tire_rr", name: "ยางหลังขวา", icon: "🛞" },
+  ]},
+  { title: "ระบบเครื่องยนต์", icon: "⚙️", items: [
+    { id: "engine_oil", name: "น้ำมันเครื่อง", icon: "🛢️" },
+    { id: "coolant", name: "น้ำหล่อเย็น", icon: "💧" },
+    { id: "battery", name: "แบตเตอรี่", icon: "🔋" },
+    { id: "wiper", name: "น้ำฉีดกระจก", icon: "🫧" },
+  ]},
+  { title: "ระบบความปลอดภัย", icon: "🛡️", items: [
+    { id: "brake", name: "ระบบเบรก", icon: "🔴" },
+    { id: "seatbelt", name: "เข็มขัดนิรภัย", icon: "🔒" },
+    { id: "mirror", name: "กระจกมองหลัง", icon: "🔲" },
+    { id: "horn", name: "แตร", icon: "📢" },
+  ]}
 ];
 
-const state = {}; // itemId -> 'ok' | 'bad'
-const TOTAL = SECTIONS.reduce((s, sec) => s + sec.items.length, 0);
+const state = {};
+const TOTAL = 16;
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxheRTqWJH8iWpeNwr8zmIuvjmnfrc1r2b9N9Fip1OP0R4OH3qs4hV8j6_1SZGq8yWuMg/exec";
 
 function buildUI() {
   const container = document.getElementById("checkSections");
   SECTIONS.forEach(sec => {
     const card = document.createElement("div");
     card.className = "card";
-    card.innerHTML = `<div class="card-title">${sec.title}</div><div class="check-grid" id="grid_${sec.title.replace(/\s/g,'')}"></div>`;
+    card.innerHTML = `<div class="card-title">${sec.icon} ${sec.title}</div><div class="check-grid"></div>`;
     const grid = card.querySelector(".check-grid");
     sec.items.forEach(item => {
       const el = document.createElement("div");
@@ -271,22 +273,18 @@ function buildUI() {
         <div class="radio-group">
           <div class="radio-btn" id="ok_${item.id}" onclick="setVal('${item.id}','ok',this)">✅ ผ่าน</div>
           <div class="radio-btn" id="bad_${item.id}" onclick="setVal('${item.id}','bad',this)">❌ ไม่ผ่าน</div>
-        </div>
-      `;
+        </div>`;
       grid.appendChild(el);
     });
     container.appendChild(card);
   });
 }
 
-function setVal(id, val, btn) {
+function setVal(id, val) {
   state[id] = val;
-  const okBtn = document.getElementById(`ok_${id}`);
-  const badBtn = document.getElementById(`bad_${id}`);
-  const item = document.getElementById(`item_${id}`);
-  okBtn.className = "radio-btn" + (val === "ok" ? " selected-ok" : "");
-  badBtn.className = "radio-btn" + (val === "bad" ? " selected-bad" : "");
-  item.className = "check-item " + (val === "ok" ? "ok" : "not-ok");
+  document.getElementById(`ok_${id}`).className = "radio-btn" + (val === "ok" ? " selected-ok" : "");
+  document.getElementById(`bad_${id}`).className = "radio-btn" + (val === "bad" ? " selected-bad" : "");
+  document.getElementById(`item_${id}`).className = "check-item " + (val === "ok" ? "ok" : "not-ok");
   updateProgress();
 }
 
@@ -306,14 +304,80 @@ function now() {
   return new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
 }
 
-function submitForm() {
-  const name = document.getElementById("driverName").value.trim();
-  const plate = document.getElementById("licensePlate").value.trim();
-  if (!name || !plate) { alert("กรุณากรอกชื่อพนักงานและทะเบียนรถ"); return; }
+// สร้าง Report Card HTML แล้วแปลงเป็น Base64
+async function generateReportImage(payload) {
+  const passed = payload.summary.bad === 0;
+  const statusColor = passed ? "#00b900" : "#e53e3e";
+  const statusText = passed ? "✅ ผ่านการตรวจ" : "⚠️ มีรายการไม่ผ่าน";
+
+  let sectionsHtml = "";
+  SECTIONS.forEach(sec => {
+    let itemsHtml = "";
+    sec.items.forEach(item => {
+      const v = payload.checks[item.id];
+      const cls = v === "ok" ? "ok" : v === "bad" ? "bad" : "pending";
+      const icon = v === "ok" ? "✅" : v === "bad" ? "❌" : "⬜";
+      const label = v === "ok" ? "ผ่าน" : v === "bad" ? "ไม่ผ่าน" : "ไม่ได้ตรวจ";
+      itemsHtml += `<div class="report-item ${cls}">${icon} ${item.name} — ${label}</div>`;
+    });
+    sectionsHtml += `
+      <div class="report-section">
+        <div class="report-section-title">${sec.icon} ${sec.title}</div>
+        <div class="report-grid">${itemsHtml}</div>
+      </div>`;
+  });
+
+  document.getElementById("reportCard").innerHTML = `
+    <div class="report-header" style="background:linear-gradient(135deg,${statusColor},${statusColor}dd)">
+      <div class="report-title">🚗 ใบตรวจสภาพรถประจำวัน</div>
+      <div class="report-sub">${statusText} &nbsp;|&nbsp; ${payload.timestamp}</div>
+    </div>
+    <div class="report-info">
+      <div class="report-info-item"><div class="report-info-label">👤 พนักงาน</div><div class="report-info-value">${payload.driverName}</div></div>
+      <div class="report-info-item"><div class="report-info-label">🚘 ทะเบียนรถ</div><div class="report-info-value">${payload.licensePlate}</div></div>
+      <div class="report-info-item"><div class="report-info-label">🛣️ เลขไมล์</div><div class="report-info-value">${payload.mileage || "-"} กม.</div></div>
+      <div class="report-info-item"><div class="report-info-label">📅 วันที่</div><div class="report-info-value">${new Date().toLocaleDateString("th-TH")}</div></div>
+    </div>
+    <div class="report-summary">
+      <div class="report-summary-box" style="background:#f0fff0">
+        <div class="report-summary-num" style="color:#00b900">${payload.summary.ok}</div>
+        <div style="color:#276749;font-size:13px">ผ่าน ✅</div>
+      </div>
+      <div class="report-summary-box" style="background:#fff5f5">
+        <div class="report-summary-num" style="color:#e53e3e">${payload.summary.bad}</div>
+        <div style="color:#c53030;font-size:13px">ไม่ผ่าน ❌</div>
+      </div>
+      <div class="report-summary-box" style="background:#f7fafc">
+        <div class="report-summary-num" style="color:#4a5568">${TOTAL}</div>
+        <div style="color:#718096;font-size:13px">ทั้งหมด</div>
+      </div>
+    </div>
+    ${sectionsHtml}
+    ${payload.remark ? `<div style="background:#fffbeb;padding:10px;border-radius:8px;margin-top:10px;font-size:13px">📝 หมายเหตุ: ${payload.remark}</div>` : ""}
+    <div class="report-footer ${passed ? "pass" : "fail"}">
+      ${passed ? "🟢 รถพร้อมออกปฏิบัติงาน" : "🔴 กรุณาแจ้งช่างก่อนนำรถออก"}
+    </div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:#a0aec0">ระบบตรวจสภาพรถ TST Warehouse</div>
+  `;
+
+  // แปลง HTML เป็น Canvas แล้วเป็น Base64
+  const canvas = await html2canvas(document.getElementById("reportCard"), {
+    scale: 2, useCORS: true, backgroundColor: "#ffffff"
+  });
+  return canvas.toDataURL("image/png").split(",")[1]; // return base64
+}
+
+async function submitForm() {
+  const name = document.getElementById("driverName").value;
+  const plate = document.getElementById("licensePlate").value;
+  if (!name || !plate) { alert("กรุณาเลือกพนักงานและทะเบียนรถ"); return; }
   const done = Object.keys(state).length;
   if (done < TOTAL) {
-    if (!confirm(`ยังตรวจไม่ครบ (${done}/${TOTAL} รายการ) ต้องการบันทึกต่อไปหรือไม่?`)) return;
+    if (!confirm(`ยังตรวจไม่ครบ (${done}/${TOTAL}) ต้องการบันทึกต่อไหม?`)) return;
   }
+
+  document.getElementById("submitBtn").disabled = true;
+  document.getElementById("submitBtn").textContent = "⏳ กำลังสร้างรูปและบันทึก...";
 
   const payload = {
     timestamp: now(),
@@ -321,6 +385,7 @@ function submitForm() {
     licensePlate: plate,
     mileage: document.getElementById("mileage").value,
     remark: document.getElementById("remark").value,
+    lineUserId: lineUserId,  // ส่ง User ID ไปด้วย
     checks: state,
     summary: {
       total: TOTAL,
@@ -329,41 +394,37 @@ function submitForm() {
     }
   };
 
-  document.getElementById("submitBtn").disabled = true;
-  document.getElementById("submitBtn").textContent = "⏳ กำลังบันทึก...";
+  try {
+    // สร้างรูป
+    const imageBase64 = await generateReportImage(payload);
+    payload.imageBase64 = imageBase64;
 
-  // ส่งข้อมูลไป Google Apps Script
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxNkd6dXCRW7JTVM14-1e422qdBdZSIF5Oc9kB11KsZAJxr2OvFcOYiKntiq1CSvz8fLg/exec";
-  
-  fetch(GAS_URL, {
-    method: "POST",
-    body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" }
-  })
-  .then(r => r.json())
-  .then(res => {
-    showResult(payload.summary.bad === 0);
-  })
-  .catch(() => {
-    // Demo mode: แสดงผลแม้ไม่มี backend
-    showResult(payload.summary.bad === 0);
-  });
+    // ส่งไป GAS
+    await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch(e) {
+    console.log("Error:", e);
+  }
+
+  showResult(payload.summary.bad === 0);
+  document.getElementById("submitBtn").disabled = false;
+  document.getElementById("submitBtn").textContent = "💾 บันทึกและส่งผลการตรวจ";
 }
 
 function showResult(passed) {
   document.getElementById("resultIcon").textContent = passed ? "✅" : "⚠️";
   document.getElementById("resultTitle").textContent = passed ? "ผ่านการตรวจ!" : "มีรายการไม่ผ่าน";
-  document.getElementById("resultSub").textContent =
-    passed
-      ? "รถสภาพดี พร้อมออกปฏิบัติงาน ระบบกำลังส่งใบตรวจกลับ LINE..."
-      : "กรุณาแจ้งช่างซ่อมก่อนออกรถ ระบบกำลังส่งใบตรวจกลับ LINE...";
+  document.getElementById("resultSub").textContent = passed
+    ? "รูปสรุปการตรวจกำลังส่งกลับ LINE แล้วครับ"
+    : "มีรายการไม่ผ่าน รูปสรุปกำลังส่งกลับ LINE แล้วครับ";
   document.getElementById("overlay").classList.add("active");
-  document.getElementById("submitBtn").disabled = false;
-  document.getElementById("submitBtn").textContent = "💾 บันทึกและส่งผลการตรวจ";
 }
 
-// Init
 buildUI();
+initLiff(); // เริ่ม LIFF
 const d = new Date();
 document.getElementById("dateDisplay").textContent =
   d.toLocaleDateString("th-TH", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
